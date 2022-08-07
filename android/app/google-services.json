@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1260378701",
+    "project_id": "alkot-mobilya",
+    "storage_bucket": "alkot-mobilya.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1260378701:android:d6ad9b15fb6cde8b139a04",
+        "android_client_info": {
+          "package_name": "com.example.alkot_mobilya"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1260378701-c1049ooioh0uot9v7jc3pqi9arm2ugo7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.alkot_mobilya",
+            "certificate_hash": "ad7433c9afa7731d18ffb638dd049ed50db0dab9"
+          }
+        },
+        {
+          "client_id": "1260378701-tfcespurs3tbuk1cp3i9la9pr4ca94km.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuMV5ktXfP7bT7D2lX49J4PcmnwugUJRE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1260378701-tfcespurs3tbuk1cp3i9la9pr4ca94km.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
