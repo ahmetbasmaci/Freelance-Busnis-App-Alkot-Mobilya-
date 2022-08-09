@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:alkot_mobilya/components/components.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -61,25 +62,37 @@ class FirebaseService {
   }
 
   static Future addItem(Item newItem) async {
-    await FirebaseService.uploadFile(newItem);
-    await fireBaseStore.collection(itemsCollaction).doc(newItem.id).set(newItem.toJson());
+    bool isConnetcted = await Components.checkConnection();
 
-    var countData = await fireBaseStore.collection(itemsCountCollection).doc('items count document').get();
+    if (!isConnetcted) return;
 
-    if (countData.data() != null) {
-      await countDoc.update({'all': countData.data()!['all'] + 1});
-      if (countData.data()![newItem.type.name] != null)
-        await changeItemTypeCount(newItem.type, increase: true);
-      // await countDoc.update({newItem.type.name: countDocData.data()![newItem.type.name] + 1});
-      else
-        await countDoc.update({newItem.type.name: 1});
-    } else {
-      await countDoc.set({'all': 1, newItem.type.name: 1});
+    try {
+      await FirebaseService.uploadFile(newItem);
+      await fireBaseStore.collection(itemsCollaction).doc(newItem.id).set(newItem.toJson());
+
+      var countData = await fireBaseStore.collection(itemsCountCollection).doc('items count document').get();
+
+      if (countData.data() != null) {
+        await countDoc.update({'all': countData.data()!['all'] + 1});
+        if (countData.data()![newItem.type.name] != null)
+          await changeItemTypeCount(newItem.type, increase: true);
+        // await countDoc.update({newItem.type.name: countDocData.data()![newItem.type.name] + 1});
+        else
+          await countDoc.update({newItem.type.name: 1});
+      } else {
+        await countDoc.set({'all': 1, newItem.type.name: 1});
+      }
+      FirebaseMessageService.sentNotifiy();
+    } catch (e) {
+      Components.showErrorSnackBar(title: 'title', msg: 'msg $e');
     }
-     FirebaseMessageService.sentNotifiy();
   }
 
   static Future updateItem(Item item, List<MyImage> newImages) async {
+    bool isConnetcted = await Components.checkConnection();
+
+    if (!isConnetcted) return;
+
     List<MyImage> mustDeleteImages = [];
     List<MyImage> mustAddImages = [];
 
@@ -102,12 +115,15 @@ class FirebaseService {
         }
       if (!isFound) mustAddImages.add(newImage);
     }
-
-    await _deleteItemFromStorage(item.id, mustDeleteImages);
-    for (var deleteImage in mustDeleteImages) item.images.removeWhere((element) => element == deleteImage);
-    for (var addImage in mustAddImages) item.images.add(addImage);
-    await uploadFile(item);
-    await fireBaseStore.collection(itemsCollaction).doc(item.id).update(item.toJson());
+    try {
+      await _deleteItemFromStorage(item.id, mustDeleteImages);
+      for (var deleteImage in mustDeleteImages) item.images.removeWhere((element) => element == deleteImage);
+      for (var addImage in mustAddImages) item.images.add(addImage);
+      await uploadFile(item);
+      await fireBaseStore.collection(itemsCollaction).doc(item.id).update(item.toJson());
+    } catch (e) {
+      Components.showErrorSnackBar(title: 'title', msg: 'msg $e');
+    }
   }
 
   static Future deleteItem(Item item) async {
@@ -136,6 +152,7 @@ class FirebaseService {
 
   static Stream<DocumentSnapshot> streamCountOfItem() {
     return fireBaseStore.collection(itemsCountCollection).doc('items count document').snapshots();
+    try {} catch (e) {}
   }
 
   static Future<int> getCountOfItem(ItemType element) async {

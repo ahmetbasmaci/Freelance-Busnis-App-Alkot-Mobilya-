@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../classes/Item.dart';
 import '../components/components.dart';

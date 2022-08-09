@@ -2,13 +2,15 @@ import 'package:alkot_mobilya/components/components.dart';
 import 'package:alkot_mobilya/services/firebase_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_custom_clippers/flutter_custom_clippers.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:get/get.dart';
+import 'package:wave_transition/wave_transition.dart';
 import '../classes/Item.dart';
 import '../classes/app_controller.dart';
 import '../components/item_list_tile.dart';
 import '../contstents/styles.dart';
 import '../services/firebase_message_service.dart';
-import '../services/notification_api.dart';
 import 'add_new_item_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -23,7 +25,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-   FirebaseMessageService.init();
+    FirebaseMessageService.init();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print("WidgetsBinding");
+    });
   }
 
   @override
@@ -31,132 +36,182 @@ class _HomePageState extends State<HomePage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text('الكوت موبيليا', style: MyStyles.appBarStyle),
-          actions: [
-            Obx(
-              () => DropdownButton<ShownItem>(
-                underline: Container(),
-                borderRadius: BorderRadius.circular(10),
-                icon: Icon(Icons.arrow_drop_down_outlined, color: Theme.of(context).scaffoldBackgroundColor),
-                value: appCtr.shownItems.value,
-                dropdownColor: Theme.of(context).primaryColor,
-                style: TextStyle(color: Colors.white),
-                alignment: Alignment.bottomCenter,
-                items: [
-                  for (var element in ShownItem.values)
-                    DropdownMenuItem(value: element, child: Components.getShownItemArabixTxt(element)),
-                ],
-                onChanged: (val) => appCtr.shownItems.value = val!,
-              ),
-            ),
-            Components.mySpace(false),
-            IconButton(
-              icon: Icon(Icons.search),
-              onPressed: () {
-                showSearch(context: context, delegate: MySearchDelegate(true));
-              },
-            ),
-          ],
-        ),
-        drawer: Drawer(
-          child: Column(
-            children: [
-              UserAccountsDrawerHeader(
-                accountName: ListTile(
-                  leading: Text(
-                    'انواع العناصر',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  trailing: MaterialButton(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                    minWidth: 0,
-                    elevation: 10,
-                    color: Theme.of(context).primaryColor,
-                    child: Icon(Icons.search, color: Colors.white),
-                    onPressed: () => showSearch(context: context, delegate: MySearchDelegate(false)),
-                  ),
+        appBar: _myAppBar(),
+        drawer: _myDrawer(),
+        body: _myBody(),
+        floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                WaveTransition(
+                  child: AddNewItemPage(),
+                  center: FractionalOffset.bottomLeft,
+                  duration: Duration(milliseconds: 1000),
                 ),
-                accountEmail: Text(''),
-                decoration: BoxDecoration(color: Theme.of(context).primaryColor),
-                otherAccountsPictures: [],
-                otherAccountsPicturesSize: Size.square(40),
-              ),
-              StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseService.streamCountOfItem(),
-                builder: ((context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-                  if (snapshot.hasError)
-                    return Center(
-                        child: Text('حدث خطأ اثناء جلب البيانات, من فضلك اعد تشفيل التطبيق',
-                            style: TextStyle(color: Colors.red)));
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    return Center(child: CircularProgressIndicator());
-                  Map dataMap = snapshot.data!.data() as Map;
-                  return Column(
-                    children: <Widget>[
-                      for (int i = 0; i < dataMap.length; i++)
-                        Components.drawerItem(
-                          context: context,
-                          title: Components.getItemTypeArabicText(
-                              ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(i))),
-                          icon: Components.getItemTypeIcon(
-                              ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(i))),
-                          selected: false,
-                          itemCount: dataMap.values.elementAt(i),
-                          onTap: () {
-                            appCtr.selectedMustShowType.value =
-                                ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(i));
-                            Get.back();
-                          },
-                        ),
-                    ],
-                  );
-                }),
-              ),
+              );
+
+              // Get.to(
+              //   () => AddNewItemPage(),
+              // duration: Duration(milliseconds: 500),
+              // transition: Transition.zoom,
+              // );
+            },
+            child: Icon(Icons.add)),
+      ),
+    );
+  }
+
+  AppBar _myAppBar() {
+    return AppBar(
+      title: Text('الكوت موبيليا', style: MyStyles.appBarStyle),
+      actions: [
+        Obx(
+          () => DropdownButton<ShownItem>(
+            underline: Container(),
+            borderRadius: BorderRadius.circular(10),
+            icon: Icon(Icons.arrow_drop_down_outlined, color: Theme.of(context).scaffoldBackgroundColor),
+            value: appCtr.shownItems.value,
+            dropdownColor: Theme.of(context).primaryColor,
+            style: TextStyle(color: Colors.white),
+            alignment: Alignment.bottomCenter,
+            items: [
+              for (var element in ShownItem.values)
+                DropdownMenuItem(value: element, child: Components.getShownItemArabixTxt(element)),
             ],
+            onChanged: (val) => appCtr.shownItems.value = val!,
           ),
         ),
-        floatingActionButton:
-          
-        FloatingActionButton(onPressed: () => Get.to(() => AddNewItemPage()), child: Icon(Icons.add)),
-        body: Stack(
-          children: [
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseService.streamItems(),
-              builder: (context, AsyncSnapshot snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Text('Loading');
-                }
+        Components.mySpace(false),
+        IconButton(
+          icon: Icon(Icons.search),
+          onPressed: () {
+            showSearch(context: context, delegate: MySearchDelegate(true));
+          },
+        ),
+      ],
+    );
+  }
 
-                List<DocumentSnapshot> list = snapshot.data.docs;
-                return SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      for (DocumentSnapshot element in list)
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ItemListTile(item: Item.fromJson(element)),
-                        )
+  Widget _myDrawer() {
+    return ClipPath(
+      clipper: OvalLeftBorderClipper(),
+      child: Drawer(
+        child: Column(
+          children: [
+            SizedBox(
+              height: 200,
+              child: Center(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black, blurRadius: 10, spreadRadius: 5),
+                      BoxShadow(color: Theme.of(context).colorScheme.primary, blurRadius: 10, spreadRadius: 5),
                     ],
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
+                  ),
+                  child: Image.asset('assets/icon/icon.png', width: 150),
+                ),
+              ),
+            ),
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseService.streamCountOfItem(),
+              builder: ((context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+                if (snapshot.hasError)
+                  return Center(
+                      child: Text('حدث خطأ اثناء جلب البيانات, من فضلك اعد تشفيل التطبيق',
+                          style: TextStyle(color: Colors.red)));
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  return Center(child: CircularProgressIndicator());
+                Map dataMap = snapshot.data!.data() as Map;
+                return Expanded(
+                  child: ListView.builder(
+                    itemCount: dataMap.length,
+                    padding: EdgeInsets.only(left: 30),
+                    shrinkWrap: true,
+                    physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    itemBuilder: (context, index) {
+                      return Components.drawerItem(
+                        context: context,
+                        title: Components.getItemTypeArabicText(
+                            ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index))),
+                        icon: Components.getItemTypeIcon(
+                            ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index))),
+                        itemType: ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index)),
+                        itemCount: dataMap.values.elementAt(index),
+                        onTap: () {
+                          appCtr.selectedMustShowType.value =
+                              ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index));
+                          Get.back();
+                        },
+                      );
+                    },
                   ),
                 );
-              },
+              }),
             ),
-            Obx(() => appCtr.isLoading.value
-                ? GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      color: Colors.grey.withOpacity(.5),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  )
-                : Container())
           ],
         ),
       ),
+    );
+  }
+
+  Widget _myBody() {
+    return Stack(
+      children: [
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseService.streamItems(),
+          builder: (context, AsyncSnapshot snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting)
+              return Center(child: CircularProgressIndicator());
+            else if (snapshot.hasError) return Text('Loading');
+
+            List<DocumentSnapshot> list = snapshot.data.docs;
+            list = list.reversed.toList();
+            return RefreshIndicator(
+              onRefresh: () async => Future.delayed(Duration(seconds: 1)).then((value) => setState(() {})),
+              child: AnimationLimiter(
+                child: ListView.builder(
+                  padding: EdgeInsets.all(20),
+                  shrinkWrap: true,
+                  physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  itemCount: list.length,
+                  itemBuilder: (BuildContext c, int i) {
+                    return AnimationConfiguration.staggeredList(
+                      position: i,
+                      delay: Duration(milliseconds: 100),
+                      child: SlideAnimation(
+                        duration: Duration(milliseconds: 2500),
+                        curve: Curves.fastLinearToSlowEaseIn,
+                        horizontalOffset: 30,
+                        verticalOffset: 300.0,
+                        child: FlipAnimation(
+                          duration: Duration(milliseconds: 3000),
+                          curve: Curves.fastLinearToSlowEaseIn,
+                          flipAxis: FlipAxis.y,
+                          child: ItemListTile(item: Item.fromJson(list[i])),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+        Obx(() => appCtr.isLoading.value
+            ? GestureDetector(
+                onTap: () {},
+                child: Container(
+                  color: Colors.grey.withOpacity(.5),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              )
+            : Container())
+      ],
     );
   }
 }
@@ -245,7 +300,7 @@ class MySearchDelegate extends SearchDelegate {
                 context: context,
                 title: Components.getItemTypeArabicText(resultList[index]),
                 icon: Components.getItemTypeIcon(resultList[index]),
-                selected: false,
+                itemType: ItemType.values.firstWhere((type) => type == resultList[index]),
                 itemCount: count,
                 onTap: () {
                   appCtr.selectedMustShowType.value = resultList[index];

@@ -1,9 +1,10 @@
-import 'package:alkot_mobilya/contstents/styles.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:io';
 import '../classes/Item.dart';
+import '../classes/app_controller.dart';
 
 class Components {
   static Widget mySpace(bool isVertical) {
@@ -19,30 +20,32 @@ class Components {
       required String content,
       required VoidCallback onOk,
       required VoidCallback onCancell}) async {
-    return Get.dialog(AlertDialog(
-      title: RichText(
-        text: TextSpan(
-          text: title,
-          style: TextStyle(color: Colors.black, fontSize: 14),
-          children: [TextSpan(text: itemTitle, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))],
-        ),
-      ),
-      content: Text(content),
-      actions: [
-        TextButton(
-          onPressed: onCancell,
-          child: Text('إلغاء', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-        ),
-        ElevatedButton(
-          style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(Color.fromARGB(255, 175, 12, 0)),
-              padding: MaterialStateProperty.all(EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
-              shape: MaterialStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)))),
-          onPressed: onOk,
-          child: Text('تأكيد حذف', style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-      ],
-    ));
+    return Get.dialog(
+        transitionDuration: Duration(milliseconds: 500),
+        AlertDialog(
+          title: RichText(
+            text: TextSpan(
+              text: title,
+              style: TextStyle(color: Colors.black, fontSize: 14),
+              children: [TextSpan(text: itemTitle, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))],
+            ),
+          ),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: onCancell,
+              child: Text('إلغاء', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(Color.fromARGB(255, 175, 12, 0)),
+                  padding: MaterialStateProperty.all(EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
+                  shape: MaterialStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)))),
+              onPressed: onOk,
+              child: Text('تأكيد حذف', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ));
   }
 
   static void showErrorSnackBar({required String title, required String msg}) {
@@ -94,31 +97,34 @@ class Components {
     required BuildContext context,
     required String title,
     required Widget icon,
-    required bool selected,
+    required ItemType itemType,
     required int itemCount,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      leading: icon,
-      title: Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-      trailing: Container(
-        width: 30,
-        height: 30,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(100),
-          boxShadow: [
-            BoxShadow(color: Colors.grey, offset: Offset(0, 0), blurRadius: 5, spreadRadius: 5),
-          ],
+    AppController appCtr = Get.find<AppController>();
+    return Column(
+      children: [
+        ListTile(
+          leading: icon,
+          selected: itemType == appCtr.selectedMustShowType.value,
+          title: Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          trailing: Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: [
+                BoxShadow(color: Colors.grey, offset: Offset(0, 0), blurRadius: 5, spreadRadius: 5),
+              ],
+            ),
+            child: Text('$itemCount', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          ),
+          onTap: onTap,
         ),
-        child: Text('$itemCount',
-            style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 15, fontWeight: FontWeight.bold)),
-      ),
-      tileColor: selected ? Theme.of(context).primaryColor.withOpacity(.8) : null,
-      textColor: selected ? Colors.white : Colors.black,
-      iconColor: selected ? Color.fromARGB(255, 239, 239, 239) : Theme.of(context).primaryColor,
-      onTap: onTap,
+        Divider(thickness: 2, indent: 20, endIndent: 20),
+      ],
     );
   }
 
@@ -128,15 +134,18 @@ class Components {
     if (type == ItemType.kitchen)
       icon = Icons.kitchen;
     else if (type == ItemType.table)
-      icon = Icons.table_bar_rounded;
+      icon = Icons.table_bar_outlined;
     else if (type == ItemType.chair)
-      icon = Icons.chair;
+      icon = Icons.chair_outlined;
     else if (type == ItemType.bed)
       icon = Icons.bed;
     else if (type == ItemType.wardrobe)
       icon = CupertinoIcons.wand_stars_inverse;
-    else if (type == ItemType.other) icon = Icons.assignment_late_sharp;
-    return Icon(icon);
+    else if (type == ItemType.other) icon = Icons.assignment_late_outlined;
+    return Icon(
+      icon,
+      color: Colors.black,
+    );
   }
 
   static getShownItemArabixTxt(ShownItem element) {
@@ -157,5 +166,16 @@ class Components {
         ),
       ),
     );
+  }
+
+  static Future<bool> checkConnection() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    print('connectivityResult $connectivityResult');
+    if (connectivityResult == ConnectivityResult.none) {
+      Components.showErrorSnackBar(
+          title: 'مشكلو في الانترنت', msg: 'انت غير متصل بالانترنت حاليا ، يرجى التأكد من الاتصال بالانترنت');
+      return false;
+    }
+    return true;
   }
 }

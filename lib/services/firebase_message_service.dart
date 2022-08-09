@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class FirebaseMessageService {
-  static init() async {
+  static Future init() async {
     await getToken(); //to can get messages events
     FirebaseMessaging.onBackgroundMessage(FirebaseMessageService.listenBackgroundMode);
     listenBackgroundModeOpenMessagee();
