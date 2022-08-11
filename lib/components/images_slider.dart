@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:alkot_mobilya/classes/Item.dart';
 import 'package:alkot_mobilya/components/components.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -32,7 +34,7 @@ class ImageSliderState extends State<ImageSlider> {
               viewportFraction: 0.9,
               enlargeCenterPage: true,
               autoPlayAnimationDuration: Duration(seconds: 1),
-              autoPlayInterval: Duration(seconds: 4),
+              autoPlayInterval: Duration(seconds: Random().nextInt(5) + 8),
               enableInfiniteScroll: true, //small right and left
               initialPage: selectedImageIndex,
               onPageChanged: (index, reason) {
@@ -42,7 +44,13 @@ class ImageSliderState extends State<ImageSlider> {
               },
             ),
             itemBuilder: (context, index, index2) {
-              return Image.network(widget.images[index].downloadUrl ?? '', fit: BoxFit.cover);
+              return Image.network(
+                widget.images[index].downloadUrl ?? '',
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  return loadingProgress == null ? child : Center(child: CircularProgressIndicator());
+                },
+              );
             },
           ),
         ),

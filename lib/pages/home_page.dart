@@ -26,9 +26,6 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     FirebaseMessageService.init();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      print("WidgetsBinding");
-    });
   }
 
   @override
@@ -126,6 +123,7 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(color: Colors.red)));
                 if (snapshot.connectionState == ConnectionState.waiting)
                   return Center(child: CircularProgressIndicator());
+                if (snapshot.data!.data() == null) return Container();
                 Map dataMap = snapshot.data!.data() as Map;
                 return Expanded(
                   child: ListView.builder(
@@ -162,45 +160,63 @@ class _HomePageState extends State<HomePage> {
   Widget _myBody() {
     return Stack(
       children: [
-        StreamBuilder<QuerySnapshot>(
-          stream: FirebaseService.streamItems(),
-          builder: (context, AsyncSnapshot snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting)
-              return Center(child: CircularProgressIndicator());
-            else if (snapshot.hasError) return Text('Loading');
+        Obx(
+          () => StreamBuilder<QuerySnapshot>(
+            stream: appCtr.selectedMustShowType.value.index == 0 &&
+                    appCtr.shownItems.value.index == 0 // just to referesh the lists
+                ? FirebaseService.streamItems()
+                : FirebaseService.streamItems(),
+            builder: (context, AsyncSnapshot snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting)
+                return Center(child: CircularProgressIndicator());
+              else if (snapshot.hasError) return Text('Loading');
 
-            List<DocumentSnapshot> list = snapshot.data.docs;
-            list = list.reversed.toList();
-            return RefreshIndicator(
-              onRefresh: () async => Future.delayed(Duration(seconds: 1)).then((value) => setState(() {})),
-              child: AnimationLimiter(
-                child: ListView.builder(
-                  padding: EdgeInsets.all(20),
-                  shrinkWrap: true,
-                  physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                  itemCount: list.length,
-                  itemBuilder: (BuildContext c, int i) {
-                    return AnimationConfiguration.staggeredList(
-                      position: i,
-                      delay: Duration(milliseconds: 100),
-                      child: SlideAnimation(
-                        duration: Duration(milliseconds: 2500),
-                        curve: Curves.fastLinearToSlowEaseIn,
-                        horizontalOffset: 30,
-                        verticalOffset: 300.0,
-                        child: FlipAnimation(
-                          duration: Duration(milliseconds: 3000),
+              List<DocumentSnapshot> list = snapshot.data.docs;
+              list = list.reversed.toList();
+              List<Item> itemsList = [];
+              for (var element in list) itemsList.add(Item.fromJson(element));
+              List<Item> selectedItemsList = [];
+              for (var element in itemsList)
+                selectedItemsList.addIf(
+                  (appCtr.selectedMustShowType.value == ItemType.all ||
+                          appCtr.selectedMustShowType.value == element.type) &&
+                      (appCtr.shownItems.value == ShownItem.all ||
+                          (appCtr.shownItems.value == ShownItem.added && element.isAddetToWebsite) ||
+                          (appCtr.shownItems.value == ShownItem.notAdded && !element.isAddetToWebsite)),
+                  element,
+                );
+
+              return RefreshIndicator(
+                onRefresh: () async => Future.delayed(Duration(seconds: 1)).then((value) => setState(() {})),
+                child: AnimationLimiter(
+                  child: ListView.builder(
+                    padding: EdgeInsets.all(20),
+                    shrinkWrap: true,
+                    physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    itemCount: selectedItemsList.length,
+                    itemBuilder: (BuildContext c, int i) {
+                      return AnimationConfiguration.staggeredList(
+                        position: i,
+                        delay: Duration(milliseconds: 100),
+                        child: SlideAnimation(
+                          duration: Duration(milliseconds: 2500),
                           curve: Curves.fastLinearToSlowEaseIn,
-                          flipAxis: FlipAxis.y,
-                          child: ItemListTile(item: Item.fromJson(list[i])),
+                          horizontalOffset: 30,
+                          verticalOffset: 300.0,
+                          child: FlipAnimation(
+                            duration: Duration(milliseconds: 3000),
+                            curve: Curves.fastLinearToSlowEaseIn,
+                            flipAxis: FlipAxis.y,
+                            child: ItemListTile(item: selectedItemsList[i]),
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
         Obx(() => appCtr.isLoading.value
             ? GestureDetector(
@@ -268,15 +284,51 @@ class MySearchDelegate extends SearchDelegate {
   }
 
   Widget getItemResult() {
-    List<Item> list = itemSearchList
-        .where((element) => element.id.contains(query.toLowerCase()) || element.title.contains(query.toLowerCase()))
-        .toList();
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: ListView.builder(
-        itemCount: list.length,
-        itemBuilder: (context, index) {
-          return ItemListTile(item: list[index]);
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseService.streamItems(),
+        builder: (context, AsyncSnapshot snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting)
+            return Center(child: CircularProgressIndicator());
+          else if (snapshot.hasError) return Text('Loading');
+
+          List<DocumentSnapshot> list = snapshot.data.docs;
+          list = list.reversed.toList();
+          List<Item> itemsList = [];
+          for (var element in list) itemsList.add(Item.fromJson(element));
+
+          List<Item> resultList = itemsList
+              .where(
+                  (element) => element.id.contains(query.toLowerCase()) || element.title.contains(query.toLowerCase()))
+              .toList();
+
+          return AnimationLimiter(
+            child: ListView.builder(
+              padding: EdgeInsets.all(20),
+              shrinkWrap: true,
+              physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+              itemCount: resultList.length,
+              itemBuilder: (BuildContext c, int i) {
+                return AnimationConfiguration.staggeredList(
+                  position: i,
+                  delay: Duration(milliseconds: 100),
+                  child: SlideAnimation(
+                    duration: Duration(milliseconds: 2500),
+                    curve: Curves.fastLinearToSlowEaseIn,
+                    horizontalOffset: 30,
+                    verticalOffset: 300.0,
+                    child: FlipAnimation(
+                      duration: Duration(milliseconds: 3000),
+                      curve: Curves.fastLinearToSlowEaseIn,
+                      flipAxis: FlipAxis.y,
+                      child: ItemListTile(item: resultList[i]),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
         },
       ),
     );

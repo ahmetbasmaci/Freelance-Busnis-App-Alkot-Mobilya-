@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:alkot_mobilya/pages/full_screen_image.dart';
 import 'package:alkot_mobilya/services/animations.dart';
@@ -147,7 +148,7 @@ class _AddNewItemPageState extends State<AddNewItemPage> {
                         // viewportFraction: 1,
                         enlargeCenterPage: true,
                         autoPlayAnimationDuration: Duration(seconds: 1),
-                        autoPlayInterval: Duration(seconds: 4),
+                        autoPlayInterval: Duration(seconds: Random().nextInt(5) + 8),
                         enableInfiniteScroll: false,
                         initialPage: selectedImageIndex,
 
@@ -175,7 +176,15 @@ class _AddNewItemPageState extends State<AddNewItemPage> {
                               child: Center(
                                 child: Components.isImageInDevice(defaultItem.images[index].path)
                                     ? Image.file(File(defaultItem.images[index].path), fit: BoxFit.contain)
-                                    : Image.network(defaultItem.images[index].downloadUrl ?? '', fit: BoxFit.contain),
+                                    : Image.network(
+                                        defaultItem.images[index].downloadUrl ?? '',
+                                        fit: BoxFit.contain,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          return loadingProgress == null
+                                              ? child
+                                              : Center(child: CircularProgressIndicator());
+                                        },
+                                      ),
                               ),
                             ),
                             IconButton(

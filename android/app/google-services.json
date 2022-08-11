@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:1260378701:android:d6ad9b15fb6cde8b139a04",
         "android_client_info": {
-          "package_name": "com.example.alkot_mobilya"
+          "package_name": "com.eng_ahmet.alkot_mobilya"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "1260378701-c1049ooioh0uot9v7jc3pqi9arm2ugo7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.alkot_mobilya",
+            "package_name": "com.eng_ahmet.alkot_mobilya",
             "certificate_hash": "ad7433c9afa7731d18ffb638dd049ed50db0dab9"
           }
         },
