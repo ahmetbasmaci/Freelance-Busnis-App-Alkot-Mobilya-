@@ -22,6 +22,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   AppController appCtr = Get.find<AppController>();
+
+  TextEditingController roomNameController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -114,43 +116,94 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            StreamBuilder<DocumentSnapshot>(
-              stream: FirebaseService.streamCountOfItem(),
-              builder: ((context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-                if (snapshot.hasError)
-                  return Center(
-                      child: Text('حدث خطأ اثناء جلب البيانات, من فضلك اعد تشفيل التطبيق',
-                          style: TextStyle(color: Colors.red)));
-                if (snapshot.connectionState == ConnectionState.waiting)
-                  return Center(child: CircularProgressIndicator());
-                if (snapshot.data!.data() == null) return Container();
-                Map dataMap = snapshot.data!.data() as Map;
-                return Expanded(
-                  child: ListView.builder(
-                    itemCount: dataMap.length,
-                    padding: EdgeInsets.only(left: 30),
-                    shrinkWrap: true,
-                    physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                    itemBuilder: (context, index) {
-                      return Components.drawerItem(
-                        context: context,
-                        title: Components.getItemTypeArabicText(
-                            ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index))),
-                        icon: Components.getItemTypeIcon(
-                            ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index))),
-                        itemType: ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index)),
-                        itemCount: dataMap.values.elementAt(index),
-                        onTap: () {
-                          appCtr.selectedMustShowType.value =
-                              ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index));
-                          Get.back();
-                        },
+            FirebaseService.isInRoom()
+                ? StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseService.streamCountOfItem(),
+                    builder: ((context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+                      if (snapshot.hasError)
+                        return Center(
+                            child: Text('حدث خطأ اثناء جلب البيانات, من فضلك اعد تشفيل التطبيق',
+                                style: TextStyle(color: Colors.red)));
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        return Center(child: CircularProgressIndicator());
+                      if (snapshot.data!.data() == null) return Container();
+                      Map dataMap = snapshot.data!.data() as Map;
+                      return Expanded(
+                        child: ListView.builder(
+                          itemCount: dataMap.length,
+                          padding: EdgeInsets.only(left: 30),
+                          shrinkWrap: true,
+                          physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                          itemBuilder: (context, index) {
+                            return Components.drawerItem(
+                              context: context,
+                              title: Components.getItemTypeArabicText(
+                                  ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index))),
+                              icon: Components.getItemTypeIcon(
+                                  ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index))),
+                              itemType:
+                                  ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index)),
+                              itemCount: dataMap.values.elementAt(index),
+                              onTap: () {
+                                appCtr.selectedMustShowType.value =
+                                    ItemType.values.firstWhere((type) => type.name == dataMap.keys.elementAt(index));
+                                Get.back();
+                              },
+                            );
+                          },
+                        ),
                       );
+                    }),
+                  )
+                : Container(),
+            Row(
+              children: [
+                Text("الغرفة الحالية: ${FirebaseService.currentRoomName}"),
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Get.dialog(AlertDialog(
+                        title: Text("انضم الى غرفة جديدة. الغرفة الحالية(${FirebaseService.currentRoomName})"),
+                        content: TextField(
+                          controller: roomNameController,
+                          decoration: InputDecoration(
+                            hintText: "اسم الغرفة",
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                        actions: [
+                          MaterialButton(
+                            onPressed: () {
+                              if (roomNameController.text.isNotEmpty) {
+                                FirebaseService.joinToRoom(roomNameController.text);
+                                Get.back();
+                                setState(() {});
+                              }
+                            },
+                            child: Text("تسجيل الدخول الى الغرفة"),
+                          ),
+                          MaterialButton(
+                            onPressed: () {
+                              FirebaseService.leaveRoom();
+                              Get.back();
+                              setState(() {});
+                            },
+                            child: Text("تسجيل الخروج"),
+                          ),
+                          MaterialButton(
+                            onPressed: () {
+                              Get.back();
+                            },
+                            child: Text("الغاء"),
+                          ),
+                        ],
+                      ));
                     },
+                    child: Text("تغيير الغرفة"),
                   ),
-                );
-              }),
-            ),
+                ),
+              ],
+            )
           ],
         ),
       ),
@@ -160,64 +213,66 @@ class _HomePageState extends State<HomePage> {
   Widget _myBody() {
     return Stack(
       children: [
-        Obx(
-          () => StreamBuilder<QuerySnapshot>(
-            stream: appCtr.selectedMustShowType.value.index == 0 &&
-                    appCtr.shownItems.value.index == 0 // just to referesh the lists
-                ? FirebaseService.streamItems()
-                : FirebaseService.streamItems(),
-            builder: (context, AsyncSnapshot snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
-                return Center(child: CircularProgressIndicator());
-              else if (snapshot.hasError) return Text('Loading');
+        FirebaseService.isInRoom()
+            ? Obx(
+                () => StreamBuilder<QuerySnapshot>(
+                  stream: appCtr.selectedMustShowType.value.index == 0 &&
+                          appCtr.shownItems.value.index == 0 // just to referesh the lists
+                      ? FirebaseService.streamItems()
+                      : FirebaseService.streamItems(),
+                  builder: (context, AsyncSnapshot snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting)
+                      return Center(child: CircularProgressIndicator());
+                    else if (snapshot.hasError) return Text('Loading');
 
-              List<DocumentSnapshot> list = snapshot.data.docs;
-              list = list.reversed.toList();
-              List<Item> itemsList = [];
-              for (var element in list) itemsList.add(Item.fromJson(element));
-              List<Item> selectedItemsList = [];
-              for (var element in itemsList)
-                selectedItemsList.addIf(
-                  (appCtr.selectedMustShowType.value == ItemType.all ||
-                          appCtr.selectedMustShowType.value == element.type) &&
-                      (appCtr.shownItems.value == ShownItem.all ||
-                          (appCtr.shownItems.value == ShownItem.added && element.isAddetToWebsite) ||
-                          (appCtr.shownItems.value == ShownItem.notAdded && !element.isAddetToWebsite)),
-                  element,
-                );
-
-              return RefreshIndicator(
-                onRefresh: () async => Future.delayed(Duration(seconds: 1)).then((value) => setState(() {})),
-                child: AnimationLimiter(
-                  child: ListView.builder(
-                    padding: EdgeInsets.all(20),
-                    shrinkWrap: true,
-                    physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                    itemCount: selectedItemsList.length,
-                    itemBuilder: (BuildContext c, int i) {
-                      return AnimationConfiguration.staggeredList(
-                        position: i,
-                        delay: Duration(milliseconds: 100),
-                        child: SlideAnimation(
-                          duration: Duration(milliseconds: 2500),
-                          curve: Curves.fastLinearToSlowEaseIn,
-                          horizontalOffset: 30,
-                          verticalOffset: 300.0,
-                          child: FlipAnimation(
-                            duration: Duration(milliseconds: 3000),
-                            curve: Curves.fastLinearToSlowEaseIn,
-                            flipAxis: FlipAxis.y,
-                            child: ItemListTile(item: selectedItemsList[i]),
-                          ),
-                        ),
+                    List<DocumentSnapshot> list = snapshot.data.docs;
+                    list = list.reversed.toList();
+                    List<Item> itemsList = [];
+                    for (var element in list) itemsList.add(Item.fromJson(element));
+                    List<Item> selectedItemsList = [];
+                    for (var element in itemsList)
+                      selectedItemsList.addIf(
+                        (appCtr.selectedMustShowType.value == ItemType.all ||
+                                appCtr.selectedMustShowType.value == element.type) &&
+                            (appCtr.shownItems.value == ShownItem.all ||
+                                (appCtr.shownItems.value == ShownItem.added && element.isAddetToWebsite) ||
+                                (appCtr.shownItems.value == ShownItem.notAdded && !element.isAddetToWebsite)),
+                        element,
                       );
-                    },
-                  ),
+
+                    return RefreshIndicator(
+                      onRefresh: () async => Future.delayed(Duration(seconds: 1)).then((value) => setState(() {})),
+                      child: AnimationLimiter(
+                        child: ListView.builder(
+                          padding: EdgeInsets.all(20),
+                          shrinkWrap: true,
+                          physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                          itemCount: selectedItemsList.length,
+                          itemBuilder: (BuildContext c, int i) {
+                            return AnimationConfiguration.staggeredList(
+                              position: i,
+                              delay: Duration(milliseconds: 100),
+                              child: SlideAnimation(
+                                duration: Duration(milliseconds: 2500),
+                                curve: Curves.fastLinearToSlowEaseIn,
+                                horizontalOffset: 30,
+                                verticalOffset: 300.0,
+                                child: FlipAnimation(
+                                  duration: Duration(milliseconds: 3000),
+                                  curve: Curves.fastLinearToSlowEaseIn,
+                                  flipAxis: FlipAxis.y,
+                                  child: ItemListTile(item: selectedItemsList[i]),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ),
+              )
+            : Container(),
         Obx(() => appCtr.isLoading.value
             ? GestureDetector(
                 onTap: () {},
@@ -242,7 +297,7 @@ class MySearchDelegate extends SearchDelegate {
   List<ItemType> itemTypeSearchList = [];
 
   void setList() async {
-    if (isSearchingForItems)
+    if (isSearchingForItems && FirebaseService.isInRoom())
       itemSearchList = await FirebaseService.getAllItems();
     else
       itemTypeSearchList = ItemType.values.map((e) => e).toList();
@@ -277,7 +332,7 @@ class MySearchDelegate extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    if (isSearchingForItems)
+    if (isSearchingForItems && FirebaseService.isInRoom())
       return getItemResult();
     else
       return getItemTypeResult();

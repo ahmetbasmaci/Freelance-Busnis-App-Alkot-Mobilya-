@@ -9,9 +9,12 @@ import 'firebase_message_service.dart';
 
 class FirebaseService {
   static FirebaseFirestore fireBaseStore = FirebaseFirestore.instance;
-  static var countDoc = fireBaseStore.collection(itemsCountCollection).doc('items count document');
+  static var countDoc;
   static String itemsCollaction = 'items';
+  static String roomsCollection = 'rooms';
   static String itemsCountCollection = 'items count';
+
+  static String currentRoomName = "";
 
   static Future uploadFile(Item item) async {
     try {
@@ -36,7 +39,7 @@ class FirebaseService {
   }
 
   static streamItems() {
-    return fireBaseStore.collection(itemsCollaction).snapshots();
+    return fireBaseStore.collection(roomsCollection).doc(currentRoomName).collection(itemsCollaction).snapshots();
   }
 
   static Future<String> getNewId() async {
@@ -56,7 +59,12 @@ class FirebaseService {
 
   static Future<int> _getTotalCountFromDatabase() async {
     int count = 0;
-    var countData = await fireBaseStore.collection(itemsCountCollection).doc('items count document').get();
+    var countData = await fireBaseStore
+        .collection(roomsCollection)
+        .doc(currentRoomName)
+        .collection(itemsCountCollection)
+        .doc('items count document')
+        .get();
     if (countData.data() != null) count = countData.data()!['all'] ?? 0;
     return count + 1;
   }
@@ -68,9 +76,19 @@ class FirebaseService {
 
     try {
       await FirebaseService.uploadFile(newItem);
-      await fireBaseStore.collection(itemsCollaction).doc(newItem.id).set(newItem.toJson());
+      await fireBaseStore
+          .collection(roomsCollection)
+          .doc(currentRoomName)
+          .collection(itemsCollaction)
+          .doc(newItem.id)
+          .set(newItem.toJson());
 
-      var countData = await fireBaseStore.collection(itemsCountCollection).doc('items count document').get();
+      var countData = await fireBaseStore
+          .collection(roomsCollection)
+          .doc(currentRoomName)
+          .collection(itemsCountCollection)
+          .doc('items count document')
+          .get();
 
       if (countData.data() != null) {
         await countDoc.update({'all': countData.data()!['all'] + 1});
@@ -120,16 +138,23 @@ class FirebaseService {
       for (var deleteImage in mustDeleteImages) item.images.removeWhere((element) => element == deleteImage);
       for (var addImage in mustAddImages) item.images.add(addImage);
       await uploadFile(item);
-      await fireBaseStore.collection(itemsCollaction).doc(item.id).update(item.toJson());
+      await fireBaseStore
+          .collection(roomsCollection)
+          .doc(currentRoomName)
+          .collection(itemsCollaction)
+          .doc(item.id)
+          .update(item.toJson());
     } catch (e) {
       Components.showErrorSnackBar(title: 'title', msg: 'msg $e');
     }
   }
 
   static Future deleteItem(Item item) async {
-    fireBaseStore.collection(itemsCollaction).doc(item.id).delete();
+    fireBaseStore.collection(roomsCollection).doc(currentRoomName).collection(itemsCollaction).doc(item.id).delete();
     await changeItemTypeCount(item.type, increase: false);
     await fireBaseStore
+        .collection(roomsCollection)
+        .doc(currentRoomName)
         .collection(itemsCountCollection)
         .doc('items count document')
         .update({ItemType.all.name: FieldValue.increment(-1)});
@@ -145,19 +170,28 @@ class FirebaseService {
 
   static Future<List<Item>> getAllItems() async {
     List<Item> items = [];
-    var coll = await fireBaseStore.collection(itemsCollaction).get();
+    var coll = await fireBaseStore.collection(roomsCollection).doc(currentRoomName).collection(itemsCollaction).get();
     for (var doc in coll.docs) items.add(Item.fromJson(doc.data()));
     return items;
   }
 
   static Stream<DocumentSnapshot> streamCountOfItem() {
-    return fireBaseStore.collection(itemsCountCollection).doc('items count document').snapshots();
-    try {} catch (e) {}
+    return fireBaseStore
+        .collection(roomsCollection)
+        .doc(currentRoomName)
+        .collection(itemsCountCollection)
+        .doc('items count document')
+        .snapshots();
   }
 
   static Future<int> getCountOfItem(ItemType element) async {
     int count = 0;
-    var coll = await fireBaseStore.collection(itemsCountCollection).doc('items count document').get();
+    var coll = await fireBaseStore
+        .collection(roomsCollection)
+        .doc(currentRoomName)
+        .collection(itemsCountCollection)
+        .doc('items count document')
+        .get();
     if (coll.data() != null) {
       count = coll.data()![element.name] ?? 0;
     }
@@ -167,5 +201,23 @@ class FirebaseService {
   static Future changeItemTypeCount(ItemType type, {required bool increase}) async {
     int num = increase ? 1 : -1;
     await countDoc.update({type.name: FieldValue.increment(num)});
+  }
+
+  static void joinToRoom(String roomName) {
+    currentRoomName = roomName;
+    countDoc = fireBaseStore
+        .collection(roomsCollection)
+        .doc(roomName)
+        .collection(itemsCountCollection)
+        .doc('items count document');
+  }
+
+  static void leaveRoom() {
+    currentRoomName = "";
+    countDoc = null;
+  }
+
+  static isInRoom() {
+    return currentRoomName != "";
   }
 }
