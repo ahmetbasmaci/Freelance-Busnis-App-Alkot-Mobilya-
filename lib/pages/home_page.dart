@@ -66,29 +66,33 @@ class _HomePageState extends State<HomePage> {
     return AppBar(
       title: Text('الكوت موبيليا', style: MyStyles.appBarStyle),
       actions: [
-        Obx(
-          () => DropdownButton<ShownItem>(
-            underline: Container(),
-            borderRadius: BorderRadius.circular(10),
-            icon: Icon(Icons.arrow_drop_down_outlined, color: Theme.of(context).scaffoldBackgroundColor),
-            value: appCtr.shownItems.value,
-            dropdownColor: Theme.of(context).primaryColor,
-            style: TextStyle(color: Colors.white),
-            alignment: Alignment.bottomCenter,
-            items: [
-              for (var element in ShownItem.values)
-                DropdownMenuItem(value: element, child: Components.getShownItemArabixTxt(element)),
-            ],
-            onChanged: (val) => appCtr.shownItems.value = val!,
-          ),
-        ),
+        FirebaseService.isInRoom()
+            ? Obx(
+                () => DropdownButton<ShownItem>(
+                  underline: Container(),
+                  borderRadius: BorderRadius.circular(10),
+                  icon: Icon(Icons.arrow_drop_down_outlined, color: Theme.of(context).scaffoldBackgroundColor),
+                  value: appCtr.shownItems.value,
+                  dropdownColor: Theme.of(context).primaryColor,
+                  style: TextStyle(color: Colors.white),
+                  alignment: Alignment.bottomCenter,
+                  items: [
+                    for (var element in ShownItem.values)
+                      DropdownMenuItem(value: element, child: Components.getShownItemArabixTxt(element)),
+                  ],
+                  onChanged: (val) => appCtr.shownItems.value = val!,
+                ),
+              )
+            : Container(),
         Components.mySpace(false),
-        IconButton(
-          icon: Icon(Icons.search),
-          onPressed: () {
-            showSearch(context: context, delegate: MySearchDelegate(true));
-          },
-        ),
+        FirebaseService.isInRoom()
+            ? IconButton(
+                icon: Icon(Icons.search),
+                onPressed: () {
+                  showSearch(context: context, delegate: MySearchDelegate(true));
+                },
+              )
+            : Container(),
       ],
     );
   }
@@ -185,14 +189,16 @@ class _HomePageState extends State<HomePage> {
                             },
                             child: Text("تسجيل الدخول الى الغرفة"),
                           ),
-                          MaterialButton(
-                            onPressed: () {
-                              FirebaseService.leaveRoom();
-                              Get.back();
-                              setState(() {});
-                            },
-                            child: Text("تسجيل الخروج"),
-                          ),
+                          FirebaseService.isInRoom()
+                              ? MaterialButton(
+                                  onPressed: () {
+                                    FirebaseService.leaveRoom();
+                                    Get.back();
+                                    setState(() {});
+                                  },
+                                  child: Text("تسجيل الخروج"),
+                                )
+                              : Container(),
                           MaterialButton(
                             onPressed: () {
                               Get.back();
@@ -202,7 +208,7 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ));
                     },
-                    child: Text("تغيير الغرفة"),
+                    child: Text("انضم الى الغرفة"),
                   ),
                 ),
               ],
@@ -275,7 +281,57 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
               )
-            : Container(),
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("كي تتمكن من مشاهدة وتحميل العناصر يجب عليك الانضمام الى غرفة"),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.dialog(AlertDialog(
+                          title: Text("اكتب اسم الغرفة التي تود الانضمام لها (يمكنك كتابة اي اسم تريد)"),
+                          content: TextField(
+                            controller: roomNameController,
+                            decoration: InputDecoration(
+                              hintText: "اسم الغرفة",
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                          actions: [
+                            MaterialButton(
+                              onPressed: () {
+                                if (roomNameController.text.isNotEmpty) {
+                                  FirebaseService.joinToRoom(roomNameController.text);
+                                  Get.back();
+                                  setState(() {});
+                                }
+                              },
+                              child: Text("تسجيل الدخول الى الغرفة"),
+                            ),
+                            FirebaseService.isInRoom()
+                                ? MaterialButton(
+                                    onPressed: () {
+                                      FirebaseService.leaveRoom();
+                                      Get.back();
+                                      setState(() {});
+                                    },
+                                    child: Text("تسجيل الخروج"),
+                                  )
+                                : Container(),
+                            MaterialButton(
+                              onPressed: () {
+                                Get.back();
+                              },
+                              child: Text("الغاء"),
+                            ),
+                          ],
+                        ));
+                      },
+                      child: Text("انضم الى الغرفة"),
+                    ),
+                  ),
+                ],
+              ),
         Obx(() => appCtr.isLoading.value
             ? GestureDetector(
                 onTap: () {},
