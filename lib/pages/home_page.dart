@@ -38,24 +38,26 @@ class _HomePageState extends State<HomePage> {
         appBar: _myAppBar(),
         drawer: _myDrawer(),
         body: _myBody(),
-        floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                WaveTransition(
-                  child: AddNewItemPage(),
-                  center: FractionalOffset.bottomLeft,
-                  duration: Duration(milliseconds: 1000),
-                ),
-              );
+        floatingActionButton: FirebaseService.isInRoom()
+            ? FloatingActionButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    WaveTransition(
+                      child: AddNewItemPage(),
+                      center: FractionalOffset.bottomLeft,
+                      duration: Duration(milliseconds: 1000),
+                    ),
+                  );
 
-              // Get.to(
-              //   () => AddNewItemPage(),
-              // duration: Duration(milliseconds: 500),
-              // transition: Transition.zoom,
-              // );
-            },
-            child: Icon(Icons.add)),
+                  // Get.to(
+                  //   () => AddNewItemPage(),
+                  // duration: Duration(milliseconds: 500),
+                  // transition: Transition.zoom,
+                  // );
+                },
+                child: Icon(Icons.add))
+            : null,
       ),
     );
   }
@@ -157,6 +159,7 @@ class _HomePageState extends State<HomePage> {
                   )
                 : Container(),
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text("الغرفة الحالية: ${FirebaseService.currentRoomName}"),
                 Center(
