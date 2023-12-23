@@ -10,9 +10,9 @@ import '../classes/Item.dart';
 import '../components/components.dart';
 
 class FullScreenImage extends StatelessWidget {
-  FullScreenImage({Key? key, required this.images, this.initialIndex = 0}) : super(key: key);
-  List<MyImage> images = [];
-  int initialIndex = 0;
+  const FullScreenImage({Key? key, required this.images, this.initialIndex = 0}) : super(key: key);
+  final List<MyImage> images;
+  final int initialIndex;
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -34,7 +34,7 @@ class FullScreenImage extends StatelessWidget {
                       child: MaterialButton(
                           color: Colors.white,
                           onPressed: () {
-                            Clipboard.setData(ClipboardData(text: images[i].downloadUrl));
+                            Clipboard.setData(ClipboardData(text: images[i].downloadUrl!));
                             Fluttertoast.showToast(msg: 'تم نسخ رابط الصورة الى الذاكرة بنجاح');
                           },
                           child: const Icon(Icons.ios_share_rounded, color: Colors.black)),

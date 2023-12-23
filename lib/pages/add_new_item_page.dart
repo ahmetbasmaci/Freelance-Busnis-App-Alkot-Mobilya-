@@ -189,7 +189,7 @@ class _AddNewItemPageState extends State<AddNewItemPage> {
                             ),
                             IconButton(
                                 onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: defaultItem.images[index].downloadUrl));
+                                  Clipboard.setData(ClipboardData(text: defaultItem.images[index].downloadUrl!));
                                   Fluttertoast.showToast(msg: 'تم نسخ رابط الصور الى الذاكرة بنجاح');
                                 },
                                 icon: const Icon(Icons.copy, color: Colors.white)),
@@ -221,7 +221,7 @@ class _AddNewItemPageState extends State<AddNewItemPage> {
                 child: Animations.animatedButton(
                     onPressed: () {
                       for (var element in defaultItem.images)
-                        Clipboard.setData(ClipboardData(text: element.downloadUrl));
+                        Clipboard.setData(ClipboardData(text: element.downloadUrl!));
 
                       Fluttertoast.showToast(msg: 'تم نسخ رابط الصور الى الذاكرة بنجاح');
                     },
