@@ -29,7 +29,8 @@
 ## 🔥 Futures
 - Add&Remove items to preview
 - Read&Write data into Firebase database
-
+-Login with email
+-Login as gest
 
 ## 📗Packages
 
